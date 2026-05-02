@@ -65,5 +65,18 @@ MetricResult::ValueType CyclomaticComplexityMetric::CalculateImpl(const function
     // в цикле (это допустимо, так как вы работаете со строковым представлением AST,
     // а не с исходным кодом напрямую).
 
+    auto count_nodes = [&](auto &node_index) {
+        int res = 0;
+        const auto &node = complexity_nodes[node_index];
+        int pos = 0;
+        while ((pos = function_ast.find(node, pos)) != std::string::npos) {
+            res++;
+            pos++;
+        }
+        return res;
+    };
+
+    return 1 + std::ranges::fold_left(std::views::iota(0, (int)complexity_nodes.size()), 0,
+                                      [&](int sum, int idx) { return sum + count_nodes(idx); });
 }
 }  // namespace analyzer::metric::metric_impl

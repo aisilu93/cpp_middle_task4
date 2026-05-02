@@ -31,7 +31,8 @@ void MetricExtractor::RegisterMetric(std::unique_ptr<IMetric> metric) { metrics.
  */
 MetricResults MetricExtractor::Get(const function::Function &func) const {
     // здесь ваш код
-    return {};
+    return metrics | std::views::transform([&](const auto &metric) { return metric->Calculate(func); }) |
+           std::ranges::to<MetricResults>();
 }
 
 }  // namespace analyzer::metric
