@@ -41,13 +41,25 @@ MetricResult::ValueType CountParametersMetric::CalculateImpl(const function::Fun
     std::string_view params_block(function_ast.data() + params_start, params_end - params_start);
 
     // 4. Считаем параметры (идентификаторы или pattern-ы)
+    int depth = 0;
     int count = 0;
-    size_t pos = 0;
-    const std::string id_marker = "(identifier";
 
-    while ((pos = params_block.find(id_marker, pos)) != std::string_view::npos) {
-        count++;
-        pos += id_marker.length();
+    for (size_t i = 0; i < params_block.size(); ++i) {
+        if (params_block[i] == '(') {
+            depth++;
+
+            if (depth == 2) {
+                if (params_block.substr(i).starts_with("(identifier") ||
+                    params_block.substr(i).starts_with("(typed_parameter") ||
+                    params_block.substr(i).starts_with("(list_splat_pattern") ||
+                    params_block.substr(i).starts_with("(dictionary_splat_pattern") ||
+                    params_block.substr(i).starts_with("(default_parameter")) {
+                    count++;
+                }
+            }
+        } else if (params_block[i] == ')') {
+            depth--;
+        }
     }
 
     return count;

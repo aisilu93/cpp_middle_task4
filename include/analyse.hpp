@@ -38,13 +38,18 @@ namespace rs = std::ranges;
  * 5. Для каждой функции вычисляет набор метрик через переданный `metric_extractor`.
  * 6. Возвращает вектор пар: (функция, результаты её метрик).
  */
-auto AnalyseFunctions(const std::vector<std::string> &files,
-                      const analyzer::metric::MetricExtractor &metric_extractor) {
+inline auto AnalyseFunctions(const std::vector<std::string> &files,
+                             const analyzer::metric::MetricExtractor &metric_extractor) {
     // здесь ваш код
+    function::FunctionExtractor extractor{};
+    return files | rv::transform([](const auto &file) { return file::File(file); }) |
+           rv::transform([&](const auto &f) { return extractor.Get(f); }) | rv::join |
+           rv::transform([&](const auto &func) { return std::make_pair(func, metric_extractor.Get(func)); }) |
+           rs::to<std::vector<std::pair<function::Function, metric::MetricResults>>>();
 }
 
 /**
- * 
+ *
  * @brief Группирует результаты анализа по классам.
  *
  * Эта функция:
@@ -63,6 +68,9 @@ auto AnalyseFunctions(const std::vector<std::string> &files,
  */
 auto SplitByClasses(const auto &analysis) {
     // здесь ваш код
+    return analysis | rv::filter([](const auto &p) { return p.first.class_name.has_value(); }) |
+           rv::chunk_by(
+               [](const auto &lhs, const auto &rhs) { return *lhs.first.class_name == *rhs.first.class_name; });
 }
 
 /**
@@ -75,6 +83,8 @@ auto SplitByClasses(const auto &analysis) {
  */
 auto SplitByFiles(const auto &analysis) {
     // здесь ваш код
+    return analysis |
+           rv::chunk_by([](const auto &lhs, const auto &rhs) { return lhs.first.filename == rhs.first.filename; });
 }
 
 /**
@@ -85,9 +95,9 @@ auto SplitByFiles(const auto &analysis) {
  *   (то есть по каждой функции и её метрикам).
  * - Передаёт результаты метрик (`elem.second`) в аккумулятор через `AccumulateNextFunctionResults`.
  */
-void AccumulateFunctionAnalysis(const auto &analysis,
-                                const analyzer::metric_accumulator::MetricsAccumulator &accumulator) {
+void AccumulateFunctionAnalysis(const auto &analysis, analyzer::metric_accumulator::MetricsAccumulator &accumulator) {
     // здесь ваш код
+    rs::for_each(analysis, [&](const auto &elem) { accumulator.AccumulateNextFunctionResults(elem.second); });
 }
 
 }  // namespace analyzer
